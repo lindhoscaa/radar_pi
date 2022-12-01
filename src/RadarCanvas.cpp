@@ -35,6 +35,8 @@
 #include "TextureFont.h"
 #include "drawutil.h"
 
+#define ENABLE_DRAGGING 0
+
 PLUGIN_BEGIN_NAMESPACE
 
 BEGIN_EVENT_TABLE(RadarCanvas, wxGLCanvas)
@@ -45,6 +47,7 @@ EVT_MOUSEWHEEL(RadarCanvas::OnMouseWheel)
 EVT_LEFT_DOWN(RadarCanvas::OnMouseClickDown)
 EVT_MOTION(RadarCanvas::OnMouseMotion)
 EVT_LEFT_UP(RadarCanvas::OnMouseClickUp)
+EVT_KEY_DOWN(RadarCanvas::OnKeyPressDown)
 END_EVENT_TABLE()
 
 static int attribs[] = {WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 16, WX_GL_STENCIL_SIZE, 8, 0};
@@ -720,7 +723,7 @@ void RadarCanvas::Render(wxPaintEvent &evt) {
 
 void RadarCanvas::OnMouseMotion(wxMouseEvent &event) {
   int x, y;
-  if (event.Dragging()) {
+  if (event.Dragging()&& ENABLE_DRAGGING != 0) {
     event.GetPosition(&x, &y);
     m_ri->m_drag.x = (x - m_mouse_down.x);
     m_ri->m_drag.y = (y - m_mouse_down.y);
@@ -731,7 +734,7 @@ void RadarCanvas::OnMouseMotion(wxMouseEvent &event) {
 void RadarCanvas::OnMouseClickUp(wxMouseEvent &event) {
   int x, y, w, h;
   event.GetPosition(&x, &y);
-  if (abs(x - m_mouse_down.x) > 10 || abs(y - m_mouse_down.y) > 10) {
+  if ((abs(x - m_mouse_down.x) > 10 || abs(y - m_mouse_down.y) > 10) && ENABLE_DRAGGING != 0) {
     m_ri->m_off_center.x += (x - m_mouse_down.x);
     m_ri->m_off_center.y += (y - m_mouse_down.y);
     m_ri->m_drag.x = 0;
@@ -825,6 +828,58 @@ void RadarCanvas::OnMouseWheel(wxMouseEvent &event) {
       m_last_mousewheel_zoom_out = now;
     }
   }
+}
+
+void RadarCanvas::OnKeyPressDown(wxKeyEvent &event){
+
+  double angle = m_ri->m_mouse_ebl[0];
+  double range = m_ri->m_mouse_vrm;
+
+  angle = round(angle*1.0f)/1.0f;
+  range = round(range*100.0f)/100.0f;
+
+  wxChar uc = event.GetUnicodeKey();
+  if ( uc != WXK_NONE ){
+    // It's a "normal" character. Notice that this includes
+    // control characters in 1..31 range, e.g. WXK_RETURN or
+    // WXK_BACK, so check for them explicitly.
+    if ( uc >= 32 ){
+        LOG_INFO(wxT("radar_pi: %s Normal key pressed :%d"), m_ri->m_name.c_str(), uc);
+    }
+    else{
+        // It's a control character
+        LOG_INFO(wxT("radar_pi: %s Control key pressed :%d"), m_ri->m_name.c_str(), uc);     
+    }
+  }
+  else{ // No Unicode equivalent.
+    switch ( event.GetKeyCode() ){
+      case WXK_LEFT:
+        LOG_DIALOG(wxT("radar_pi: %s Key pressed : LEFT"), m_ri->m_name.c_str());
+        angle -= 1;
+        break;
+
+      case WXK_RIGHT:
+        LOG_DIALOG(wxT("radar_pi: %s Key pressed : RIGHT"), m_ri->m_name.c_str());
+        angle += 1;
+        break;
+
+        case WXK_UP:
+        LOG_DIALOG(wxT("radar_pi: %s Key pressed : UP"), m_ri->m_name.c_str());
+        range += 0.01;
+        break;
+
+      case WXK_DOWN:
+        LOG_DIALOG(wxT("radar_pi: %s Key pressed : DOWN"), m_ri->m_name.c_str());
+        range -= 0.01;
+        break;
+    }
+
+    m_ri->SetMouseVrmEbl(range, angle);
+    m_ri->SetBearingKeyboard(0);
+    
+  }
+  event.Skip();
+
 }
 
 PLUGIN_END_NAMESPACE

@@ -1417,6 +1417,15 @@ void RadarInfo::SetBearing(int bearing) {
   }
 }
 
+void RadarInfo::SetBearingKeyboard(int bearing) {
+  
+  m_vrm[bearing] = m_mouse_vrm;
+  
+  for (int i = 0; i < ORIENTATION_NUMBER; i++) {
+    m_ebl[i][bearing] = m_mouse_ebl[i];
+  }
+}
+
 void RadarInfo::ComputeTargetTrails() {
   static TrailRevolutionsAge maxRevs[TRAIL_ARRAY_SIZE] = {
       SECONDS_TO_REVOLUTIONS(15),  SECONDS_TO_REVOLUTIONS(30),  SECONDS_TO_REVOLUTIONS(60), SECONDS_TO_REVOLUTIONS(180),

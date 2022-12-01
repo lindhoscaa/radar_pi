@@ -284,6 +284,7 @@ public:
     void SetMousePosition(GeoPosition pos);
     void SetMouseVrmEbl(double vrm, double ebl);
     void SetBearing(int bearing);
+    void SetBearingKeyboard(int bearing);
     void SampleCourse(int angle);
     int GetOrientation();
     void ClearTrails();

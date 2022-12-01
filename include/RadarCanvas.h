@@ -54,6 +54,7 @@ public:
     void OnMouseClickUp(wxMouseEvent& event);
     void OnMouseMotion(wxMouseEvent& event);
     void OnMouseWheel(wxMouseEvent& event);
+    void OnKeyPressDown(wxKeyEvent& event);
 
 private:
     void FillCursorTexture();
