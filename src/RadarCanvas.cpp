@@ -870,12 +870,14 @@ void RadarCanvas::OnKeyPressDown(wxKeyEvent &event){
 
       case WXK_DOWN:
         LOG_DIALOG(wxT("radar_pi: %s Key pressed : DOWN"), m_ri->m_name.c_str());
-        range -= 0.01;
+        if (range > 0.01){
+          range -= 0.01;
+        }
         break;
     }
 
     m_ri->SetMouseVrmEbl(range, angle);
-    m_ri->SetBearingKeyboard(0);
+    m_ri->SetBearingKeyboard(1);
     
   }
   event.Skip();
