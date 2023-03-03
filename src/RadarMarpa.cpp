@@ -112,6 +112,9 @@ bool ArpaTarget::Pix(int ang, int rad) {
     return false;
   }
   int angle = MOD_SPOKES(ang);
+  if (angle >= m_ri->m_spokes || angle < 0) {
+    return false;
+  }
   bool bit0 = (m_ri->m_history[angle].line[rad] & 128) > 0;
   bool bit1 = (m_ri->m_history[angle].line[rad] & 64) > 0;
   bool bit2 = (m_ri->m_history[angle].line[rad] & 32) > 0;
@@ -951,7 +954,7 @@ void ArpaTarget::RefreshTarget(int dist) {
     double s2 = m_position.dlon_dt;                          // m  per second
     m_speed_kn = (sqrt(s1 * s1 + s2 * s2)) * 3600. / 1852.;  // and convert to nautical miles per hour
     m_course = rad2deg(atan2(s2, s1));
-    if (m_course < 0) m_course += 360.;
+    m_course = MOD_DEGREES_FLOAT(m_course);
     if (m_speed_kn > 20.) {
       pol = Pos2Polar(m_position, own_pos);
     }
@@ -1128,9 +1131,8 @@ void ArpaTarget::PassARPAtoOCPN(Polar* pol, OCPN_target_status status) {
   }
 
   double dist = pol->r / m_ri->m_pixels_per_meter / 1852.;
-  double bearing = pol->angle * 360. / m_ri->m_spokes;
-
-  if (bearing < 0) bearing += 360;
+  double bearing = SCALE_SPOKES_TO_DEGREES(pol->angle);
+  bearing = MOD_DEGREES_FLOAT(bearing);
   s_TargID = wxString::Format(wxT("%2i"), m_target_id);
   s_speed = wxString::Format(wxT("%4.2f"), m_speed_kn);
   s_course = wxString::Format(wxT("%3.1f"), m_course);

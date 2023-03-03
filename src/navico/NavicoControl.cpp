@@ -203,13 +203,11 @@ bool NavicoControl::SetControlValue(ControlType controlType, RadarControlItem &i
 
     case CT_BEARING_ALIGNMENT: {  // to be consistent with the local bearing alignment of the pi
                                   // this bearing alignment works opposite to the one an a Lowrance display
-      if (value < 0) {
-        value += 360;
-      }
-      int v = value * 10;
-      int v1 = v / 256;
-      int v2 = v & 255;
-      uint8_t cmd[4] = {0x05, 0xc1, (uint8_t)v2, (uint8_t)v1};
+      value = MOD_DEGREES(value);
+      uint16_t v = SCALE_DEGREES_TO_DECIDEGREES(value);
+      uint8_t v1 = v >> 8;
+      uint8_t v2 = (uint8_t) v;
+      uint8_t cmd[4] = {0x05, 0xc1, v2, v1};
       LOG_VERBOSE(wxT("%s Bearing alignment: %d"), m_name.c_str(), v);
       r = TransmitCmd(cmd, sizeof(cmd));
       break;
@@ -227,26 +225,39 @@ bool NavicoControl::SetControlValue(ControlType controlType, RadarControlItem &i
     }
 
     case CT_SEA: {
-      int v = (value + 1) * 255 / 100;
-      if (v > 255) {
-        v = 255;
-      }
       if (m_ri->m_radar_type >= RT_HaloA) {
-        uint8_t cmd[] = {0x11, 0xc1, 0, 0, 0, 0};
+	// Capture data:
+	// Data: 11c101000004 = Auto
+	// Data: 11c10100ff04 = Auto-1
+	// Data: 11c10100ce04 = Auto-50
+	// Data: 11c101323204 = Auto+50
+	// Data: 11c100646402 = 100
+        // Data: 11c100000002 = 0
+        // Data: 11c100000001 = Mode manual
+        // Data: 11c101000001 = Mode auto
+
+        uint8_t cmd[] = {0x11, 0xc1, 0, 0, 0, 1};
 
         if (state == RCS_MANUAL) {
-          cmd[5] = 0x01;
+          cmd[2] = 0x00;
+	  r = TransmitCmd(cmd, sizeof(cmd));
+          cmd[5] = 0x02;
         } else {
           cmd[2] = 0x01;
-          if (value > 0) {
-            cmd[3] = value;
-          }
-          cmd[4] = (uint8_t)value;
-          cmd[5] = 0x05;
+	  r = TransmitCmd(cmd, sizeof(cmd));
+          cmd[5] = 0x04;
         }
+	if (value > 0) {
+	  cmd[3] = (uint8_t) value;
+	}
+	cmd[4] = (uint8_t)value;
         LOG_VERBOSE(wxT("%s Halo Sea: %d auto %d"), m_name.c_str(), value, autoValue);
         r = TransmitCmd(cmd, sizeof(cmd));
       } else {
+	int v = (value + 1) * 255 / 100;
+	if (v > 255) {
+	  v = 255;
+	}
         uint8_t cmd[] = {0x06, 0xc1, 0x02, 0, 0, 0, (uint8_t)autoValue, 0, 0, 0, (uint8_t)v};
 
         LOG_VERBOSE(wxT("%s Sea: %d auto %d"), m_name.c_str(), value, autoValue);
@@ -320,8 +331,10 @@ bool NavicoControl::SetControlValue(ControlType controlType, RadarControlItem &i
       uint8_t sector = (controlType - CT_NO_TRANSMIT_START_1);
       uint8_t enable = (state >= RCS_MANUAL) ? 1 : 0;
       int valueEnd = m_ri->m_no_transmit_end[sector].GetValue();
-      uint16_t start_raw = SCALE_DEGREES_TO_DECIDEGREES((value + 360 % 360));
-      uint16_t end_raw = SCALE_DEGREES_TO_DECIDEGREES((valueEnd + 360 % 360));
+      value = MOD_DEGREES(value);
+      valueEnd = MOD_DEGREES(valueEnd);
+      uint16_t start_raw = SCALE_DEGREES_TO_DECIDEGREES(value);
+      uint16_t end_raw = SCALE_DEGREES_TO_DECIDEGREES(valueEnd);
       uint8_t enable_cmd[] = {0x0d, 0xc1, sector, 0, 0, 0, enable};
       uint8_t angle_cmd[] = {
           0xc0,
@@ -350,8 +363,8 @@ bool NavicoControl::SetControlValue(ControlType controlType, RadarControlItem &i
       uint8_t sector = (controlType - CT_NO_TRANSMIT_END_1);
       uint8_t enable = (state >= RCS_MANUAL) ? 1 : 0;
       int valueStart = m_ri->m_no_transmit_start[sector].GetValue();
-      uint16_t start_raw = SCALE_DEGREES_TO_DECIDEGREES((valueStart + 360 % 360));
-      uint16_t end_raw = SCALE_DEGREES_TO_DECIDEGREES((value + 360 % 360));
+      uint16_t start_raw = SCALE_DEGREES_TO_DECIDEGREES(MOD_DEGREES(valueStart));
+      uint16_t end_raw = SCALE_DEGREES_TO_DECIDEGREES(MOD_DEGREES(value));
       uint8_t enable_cmd[] = {0x0d, 0xc1, sector, 0, 0, 0, enable};
       uint8_t angle_cmd[] = {
           0xc0,
